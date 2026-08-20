@@ -15,6 +15,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Monitor.Core\Monitor.Core.csproj" />
+    <ProjectReference Include="..\Monitor.Data\Monitor.Data.csproj" />
   </ItemGroup>
 
 </Project>

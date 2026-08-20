@@ -3,6 +3,7 @@ using Monitor.Api.Middleware;
 using Monitor.Core.Errors;
 using Monitor.Core.Logging;
 using Monitor.Core.Options;
+using Monitor.Data.DependencyInjection;
 using Serilog;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -33,8 +34,12 @@ builder.Services.AddValidatedOptions<CorsOptions>(builder.Configuration, CorsOpt
 builder.Services.AddValidatedOptions<RateLimitOptions>(builder.Configuration, RateLimitOptions.SectionName);
 builder.Services.AddValidatedOptions<WebhookOptions>(builder.Configuration, WebhookOptions.SectionName);
 
-// Bounded-context service registrations (Monitor.Identity / Files / Operations
-// / Data) are added by their own slices via extension methods on
+// ── Primary + operational NpgsqlDataSources, Dapper repositories, and the
+//    fail-fast startup connectivity check (infrastructure/database/connection.ts) ──
+builder.Services.AddMonitorData();
+
+// Bounded-context service registrations (Monitor.Identity / Files / Operations)
+// are added by their own slices via extension methods on
 // builder.Services — intentionally not referenced here yet.
 
 var app = builder.Build();

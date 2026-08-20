@@ -20,6 +20,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\Monitor.Core\Monitor.Core.csproj" />
+    <ProjectReference Include="..\..\src\Monitor.Data\Monitor.Data.csproj" />
     <ProjectReference Include="..\..\src\Monitor.Api\Monitor.Api.csproj" />
   </ItemGroup>
 
