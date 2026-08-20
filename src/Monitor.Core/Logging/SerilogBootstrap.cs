@@ -1,6 +1,7 @@
 using Serilog;
 using Serilog.Events;
 using Serilog.Formatting.Compact;
+using Serilog.Sinks.SystemConsole.Themes;
 
 namespace Monitor.Core.Logging;
 
@@ -31,7 +32,10 @@ public static class SerilogBootstrap
 
         if (isDevelopment)
         {
-            configuration.WriteTo.Console();
+            // Matches the source's dev-only `combine(colorize(), simple())` console format.
+            configuration.WriteTo.Console(
+                outputTemplate: "[{Timestamp:HH:mm:ss} {Level:u3}] {Message:lj}{NewLine}{Exception}",
+                theme: AnsiConsoleTheme.Code);
         }
 
         return configuration;

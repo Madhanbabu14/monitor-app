@@ -10,7 +10,17 @@ namespace Monitor.Core.Options;
 /// section: it is only registered as an NpgsqlDataSource (in Monitor.Data)
 /// when a connection string is actually present.
 /// </summary>
-public sealed class DatabaseOptions
+/// <remarks>
+/// .NET 6's <c>OptionsBuilder.ValidateDataAnnotations()</c> only evaluates
+/// attributes declared directly on this class's own properties (e.g. the
+/// <see cref="Required"/> on <see cref="Primary"/> itself, which just checks
+/// for null) — it does NOT recurse into <see cref="PrimaryDatabaseOptions"/>'s
+/// own attributes. <see cref="IValidatableObject"/> is implemented here to
+/// explicitly re-run attribute validation against the nested objects so a
+/// missing/invalid <see cref="PrimaryDatabaseOptions.ConnectionString"/> still
+/// fails fast at boot, matching the source's <c>required('DATABASE_URL')</c>.
+/// </remarks>
+public sealed class DatabaseOptions : IValidatableObject
 {
     public const string SectionName = "Database";
 
@@ -19,6 +29,37 @@ public sealed class DatabaseOptions
 
     /// <summary>Null/unset => operational (production replica) source is not registered.</summary>
     public OperationalDatabaseOptions? Operational { get; set; }
+
+    public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
+    {
+        foreach (var result in ValidateNested(Primary, nameof(Primary)))
+        {
+            yield return result;
+        }
+
+        if (Operational is not null)
+        {
+            foreach (var result in ValidateNested(Operational, nameof(Operational)))
+            {
+                yield return result;
+            }
+        }
+    }
+
+    private static IEnumerable<ValidationResult> ValidateNested(object instance, string memberPrefix)
+    {
+        var context = new ValidationContext(instance);
+        var results = new List<ValidationResult>();
+        Validator.TryValidateObject(instance, context, results, validateAllProperties: true);
+
+        foreach (var result in results)
+        {
+            var memberNames = result.MemberNames.Any()
+                ? result.MemberNames.Select(m => $"{memberPrefix}.{m}")
+                : new[] { memberPrefix };
+            yield return new ValidationResult(result.ErrorMessage, memberNames);
+        }
+    }
 }
 
 public sealed class PrimaryDatabaseOptions

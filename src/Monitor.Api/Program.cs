@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Configuration;
 using Monitor.Api.Middleware;
 using Monitor.Core.Errors;
 using Monitor.Core.Logging;
@@ -11,6 +12,14 @@ Log.Logger = SerilogBootstrap
     .Configure(new LoggerConfiguration(), builder.Environment.IsDevelopment())
     .CreateLogger();
 builder.Host.UseSerilog();
+
+// ── Listen port (config.port / PORT) — read straight off IConfiguration
+//    before the host is built so it can drive Kestrel's bound address,
+//    same as the source's `app.listen(config.port)`. The validated
+//    AppOptions registered below is still the source of truth for the
+//    rest of the app; this is just early enough to configure the listener.
+var appPort = builder.Configuration.GetValue($"{AppOptions.SectionName}:Port", 4000);
+builder.WebHost.UseUrls($"http://0.0.0.0:{appPort}");
 
 // ── Validated options (config/index.ts) — fail fast at boot if a required
 //    value is missing/invalid, instead of throwing the first time a route
