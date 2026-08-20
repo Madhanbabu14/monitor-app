@@ -16,6 +16,12 @@ dist/
 frontend/dist/
 backend/dist/
 
+# .NET build output
+bin/
+obj/
+*.user
+logs/
+
 # Logs
 *.log
 npm-debug.log*
@@ -27,3 +33,17 @@ Thumbs.db
 # IDE
 .vscode/
 .idea/
+
+# Added by Forge migration (build/dependency output)
+target/
+build/
+out/
+.next/
+.turbo/
+coverage/
+__pycache__/
+*.pyc
+.gradle/
+.venv/
+venv/
+vendor/
