@@ -13,10 +13,13 @@ namespace Monitor.Data.DataSources;
 /// Unlike the source — which chose TLS at runtime via
 /// <c>config.env === 'production' || process.env.DB_SSL === 'true' ? { rejectUnauthorized: false } : false</c> —
 /// SSL Mode is always driven by <see cref="PrimaryDatabaseOptions.SslMode"/> /
-/// <see cref="OperationalDatabaseOptions.SslMode"/>, which default to and are
-/// locked to <c>VerifyFull</c>. The insecure <c>rejectUnauthorized:false</c>
-/// escape hatch does not survive the migration; an optional CA bundle
-/// (<c>SslCaCertificatePath</c>) is honoured via Npgsql's own
+/// <see cref="OperationalDatabaseOptions.SslMode"/>, which default to
+/// <c>VerifyFull</c> (see <see cref="ParseSslMode"/>). Configuration may still
+/// opt down to <c>Disable</c>/<c>Allow</c>/<c>Prefer</c>/<c>Require</c>/<c>VerifyCA</c>
+/// for lower environments; only an unrecognized or unset value falls back to
+/// <c>VerifyFull</c>. The insecure <c>rejectUnauthorized:false</c> escape hatch
+/// from the source does not survive the migration as a *default*; an optional
+/// CA bundle (<c>SslCaCertificatePath</c>) is honoured via Npgsql's own
 /// <c>Root Certificate</c> connection string keyword so VerifyFull can
 /// validate against a private CA without relying on the OS trust store.
 /// </remarks>
