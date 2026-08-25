@@ -104,4 +104,89 @@ public class SecurityHeadersMiddlewareTests
 
         Assert.NotNull(pipeline);
     }
+
+    [Fact]
+    public async Task InvokeAsync_ContentSecurityPolicy_MatchesHelmetDefaultDirectivesExactly()
+    {
+        // Locks the exact helmet v6/v7 default CSP directive string (order and
+        // punctuation matter for parity with the source's `app.use(helmet())`
+        // with no options passed).
+        var (_, feature) = await InvokeAsync(_ => Task.CompletedTask);
+
+        const string expectedCsp =
+            "default-src 'self';base-uri 'self';font-src 'self' https: data:;" +
+            "form-action 'self';frame-ancestors 'self';img-src 'self' data:;" +
+            "object-src 'none';script-src 'self';script-src-attr 'none';" +
+            "style-src 'self' https: 'unsafe-inline';upgrade-insecure-requests";
+
+        Assert.Equal(expectedCsp, feature.Headers["Content-Security-Policy"]);
+    }
+
+    [Fact]
+    public async Task InvokeAsync_SetsExactlyTheDocumentedHeaderSet_NoMoreNoLess()
+    {
+        var (_, feature) = await InvokeAsync(_ => Task.CompletedTask);
+
+        var expectedHeaderNames = new[]
+        {
+            "Content-Security-Policy",
+            "Cross-Origin-Opener-Policy",
+            "Cross-Origin-Resource-Policy",
+            "Origin-Agent-Cluster",
+            "Referrer-Policy",
+            "Strict-Transport-Security",
+            "X-Content-Type-Options",
+            "X-DNS-Prefetch-Control",
+            "X-Download-Options",
+            "X-Frame-Options",
+            "X-Permitted-Cross-Domain-Policies",
+            "X-XSS-Protection",
+        };
+
+        Assert.Equal(expectedHeaderNames.Length, feature.Headers.Count);
+        foreach (var name in expectedHeaderNames)
+        {
+            Assert.True(feature.Headers.ContainsKey(name), $"Expected header '{name}' to be set.");
+        }
+    }
+
+    [Fact]
+    public async Task InvokeAsync_NextThrows_PropagatesExceptionAndStillRegistersHeaderCallback()
+    {
+        var context = new DefaultHttpContext();
+        context.Response.Body = new MemoryStream();
+        var feature = new OnStartingCapableResponseFeature { Body = context.Response.Body };
+        context.Features.Set<IHttpResponseFeature>(feature);
+
+        var thrown = new InvalidOperationException("downstream failure");
+        var middleware = new SecurityHeadersMiddleware(_ => throw thrown);
+
+        var ex = await Assert.ThrowsAsync<InvalidOperationException>(() => middleware.InvokeAsync(context));
+        Assert.Same(thrown, ex);
+
+        // The OnStarting callback was registered (SecurityHeadersMiddleware
+        // registers it before calling next), even though this particular
+        // request never reached the point of actually starting the response.
+        await feature.FireOnStartingAsync();
+        Assert.Equal("nosniff", feature.Headers["X-Content-Type-Options"]);
+    }
+
+    [Fact]
+    public async Task InvokeAsync_HeadersNotAppliedUntilResponseActuallyStarts()
+    {
+        var context = new DefaultHttpContext();
+        context.Response.Body = new MemoryStream();
+        var feature = new OnStartingCapableResponseFeature { Body = context.Response.Body };
+        context.Features.Set<IHttpResponseFeature>(feature);
+
+        var middleware = new SecurityHeadersMiddleware(_ => Task.CompletedTask);
+        await middleware.InvokeAsync(context);
+
+        // Before the hosting layer fires OnStarting, no headers should be visible yet.
+        Assert.False(feature.Headers.ContainsKey("X-Frame-Options"));
+
+        await feature.FireOnStartingAsync();
+
+        Assert.Equal("SAMEORIGIN", feature.Headers["X-Frame-Options"]);
+    }
 }
