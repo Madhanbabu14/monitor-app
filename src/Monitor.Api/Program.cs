@@ -25,8 +25,15 @@ AppDomain.CurrentDomain.UnhandledException += (_, e) =>
     Log.Fatal(e.ExceptionObject as Exception, "Uncaught exception");
 TaskScheduler.UnobservedTaskException += (_, e) =>
 {
-    Log.Error(e.Exception, "Unhandled rejection");
+    // Source: process.on('unhandledRejection', ...) logs and then calls
+    // process.exit(1) — deliberately fail-fast rather than limping on with
+    // a possibly-corrupted process state. Mark observed only to suppress
+    // the finalizer's own crash race, but still terminate immediately
+    // ourselves to match the source's semantics.
+    Log.Fatal(e.Exception, "Unhandled rejection");
     e.SetObserved();
+    Log.CloseAndFlush();
+    Environment.Exit(1);
 };
 
 // ── Listen port (config.port / PORT) — read straight off IConfiguration
@@ -37,12 +44,17 @@ TaskScheduler.UnobservedTaskException += (_, e) =>
 var appPort = builder.Configuration.GetValue($"{AppOptions.SectionName}:Port", 4000);
 builder.WebHost.UseUrls($"http://0.0.0.0:{appPort}");
 
-// ── express.json({ limit: '10mb' }) / express.urlencoded(...) (app.ts) —
-//    body-size ceiling lives on Kestrel in ASP.NET Core; model binding
-//    handles the parsing itself. ──────────────────────────────────────────
+// ── express.json({ limit: '10mb' }) / express.urlencoded({ extended: true })
+//    (app.ts) — express.urlencoded left its limit at Express's own default
+//    (100kb), only express.json raised the ceiling to 10mb. Set the tighter
+//    100kb figure as the Kestrel-wide default here; the per-content-type
+//    bump to 10mb for JSON bodies is applied by a middleware below (before
+//    any endpoint reads the request body). ─────────────────────────────────
+const long JsonBodyLimitBytes = 10 * 1024 * 1024; // 10mb, matches express.json({ limit: '10mb' })
+const long DefaultBodyLimitBytes = 100 * 1024; // 100kb, express's own default (urlencoded left unconfigured)
 builder.WebHost.ConfigureKestrel(serverOptions =>
 {
-    serverOptions.Limits.MaxRequestBodySize = 10 * 1024 * 1024; // 10mb
+    serverOptions.Limits.MaxRequestBodySize = DefaultBodyLimitBytes;
 });
 
 // ── Graceful shutdown forced-exit timeout (server.ts's 10s setTimeout after
@@ -88,6 +100,24 @@ var app = builder.Build();
 // Registered first so it wraps every middleware/endpoint below it.
 app.UseAppExceptionHandling();
 
+// ── raise the body-size ceiling back to 10mb for JSON requests only,
+//    mirroring express.json({ limit: '10mb' }) vs. the un-raised
+//    express.urlencoded default applied above. Must run before anything
+//    downstream reads the request body. ────────────────────────────────────
+app.Use(async (context, next) =>
+{
+    if (context.Request.ContentType?.Contains("application/json", StringComparison.OrdinalIgnoreCase) == true)
+    {
+        var bodySizeFeature = context.Features.Get<Microsoft.AspNetCore.Http.Features.IHttpMaxRequestBodySizeFeature>();
+        if (bodySizeFeature is { IsReadOnly: false })
+        {
+            bodySizeFeature.MaxRequestBodySize = JsonBodyLimitBytes;
+        }
+    }
+
+    await next();
+});
+
 // ── app.use(helmet()) (app.ts) ─────────────────────────────────────────────
 app.UseSecurityHeaders();
 
@@ -95,8 +125,14 @@ app.UseSecurityHeaders();
 var corsOrigin = app.Services.GetRequiredService<IOptions<CorsOptions>>().Value.Origin;
 app.UseCors(policy => policy
     .WithOrigins(corsOrigin)
+    // AllowAnyHeader mirrors the `cors` npm package's default, which
+    // reflects back whatever Access-Control-Request-Headers the browser
+    // sent rather than allowlisting a fixed set. The method set, however,
+    // IS allowlisted by the `cors` package's default
+    // (GET,HEAD,PUT,PATCH,POST,DELETE) — match it exactly instead of
+    // AllowAnyMethod, which would be broader than the source.
     .AllowAnyHeader()
-    .AllowAnyMethod()
+    .WithMethods("GET", "HEAD", "PUT", "PATCH", "POST", "DELETE")
     .AllowCredentials());
 
 // ── app.use(compression()) (app.ts) ────────────────────────────────────────

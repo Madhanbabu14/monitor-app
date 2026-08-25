@@ -55,6 +55,12 @@ public class RateLimitingMiddlewareTests
         Assert.Equal(200, context.Response.StatusCode);
         Assert.Equal("5", context.Response.Headers["RateLimit-Limit"]);
         Assert.Equal("4", context.Response.Headers["RateLimit-Remaining"]);
+
+        // draft-6 standardHeaders: RateLimit-Reset is seconds-until-reset
+        // (a small delta), never an absolute Unix timestamp.
+        var resetSeconds = int.Parse(context.Response.Headers["RateLimit-Reset"]!);
+        Assert.InRange(resetSeconds, 0, 60);
+        Assert.Equal("5;w=60", context.Response.Headers["RateLimit-Policy"]);
     }
 
     [Fact]

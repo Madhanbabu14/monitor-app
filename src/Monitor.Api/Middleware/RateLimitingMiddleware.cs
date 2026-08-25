@@ -61,9 +61,16 @@ public sealed class RateLimitingMiddleware
         }
 
         var remaining = Math.Max(0, options.MaxRequests - count);
+        var resetSeconds = Math.Max(0, (int)Math.Ceiling((resetAt - now).TotalSeconds));
+        var windowSeconds = Math.Max(0, (int)Math.Ceiling(TimeSpan.FromMilliseconds(options.WindowMs).TotalSeconds));
         context.Response.Headers["RateLimit-Limit"] = options.MaxRequests.ToString();
         context.Response.Headers["RateLimit-Remaining"] = remaining.ToString();
-        context.Response.Headers["RateLimit-Reset"] = resetAt.ToUnixTimeSeconds().ToString();
+        // draft-6 standardHeaders (express-rate-limit): RateLimit-Reset is the
+        // number of seconds remaining until the window resets, NOT an epoch
+        // timestamp.
+        context.Response.Headers["RateLimit-Reset"] = resetSeconds.ToString();
+        // draft-6 also emits RateLimit-Policy describing the configured window.
+        context.Response.Headers["RateLimit-Policy"] = $"{options.MaxRequests};w={windowSeconds}";
 
         if (count > options.MaxRequests)
         {
