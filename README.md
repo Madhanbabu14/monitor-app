@@ -37,8 +37,14 @@ docker-compose up -d
 ```
 
 - Frontend: http://localhost:3000
-- Backend API: http://localhost:4000
+- API (via Monitor.Gateway): http://localhost:8080
 - PostgreSQL: localhost:5432
+
+The frontend always talks to the gateway, never to a backend directly. During
+the .NET migration the gateway (`src/Monitor.Gateway`, YARP) routes each
+`/api/*` path to whichever service currently implements it — the legacy
+Node/Express backend, or the growing `Monitor.Api` — per
+`src/Monitor.Gateway/appsettings*.json`.
 
 ### 3. Local Development
 
