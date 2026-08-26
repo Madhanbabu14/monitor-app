@@ -4,12 +4,12 @@ namespace Monitor.UnitTests.Database;
 
 /// <summary>
 /// Monitor.Database's Program.cs runs
-/// <c>DeployChanges.To.PostgresqlDatabase(...).WithScriptsEmbeddedInAssembly(Assembly.GetExecutingAssembly())</c>,
+/// <c>DeployChanges.To.PostgresqlDatabase(...).WithScriptsEmbeddedInAssembly(Assembly.GetExecutingAssembly(), filter)</c>,
 /// which discovers scripts purely from embedded-resource names and, by DbUp's default
 /// <see cref="DbUp.Engine.Filters.DefaultScriptExecutionOrder"/>, runs them in ordinal
 /// (alphabetical) order. These tests pin down the actual embedded-resource surface of the
-/// built Monitor.Database.dll so that "used tables first" (Script0001 before Script0002) is
-/// enforced by naming, not by a comment that can rot.
+/// built Monitor.Database.dll so that "used tables first" (Script0001 before Script0002,
+/// both before any dev-only Seed script) is enforced by naming, not by a comment that can rot.
 /// </summary>
 public class DatabaseEmbeddedResourcesTests
 {
@@ -23,7 +23,7 @@ public class DatabaseEmbeddedResourcesTests
     }
 
     [Fact]
-    public void EmbeddedResources_ContainExactlyTheTwoExpectedScripts()
+    public void EmbeddedResources_ContainExactlyTheThreeExpectedScripts()
     {
         var assembly = LoadDatabaseAssembly();
 
@@ -37,6 +37,7 @@ public class DatabaseEmbeddedResourcesTests
             {
                 "Monitor.Database.Scripts.Script0001_UsedTables.sql",
                 "Monitor.Database.Scripts.Script0002_RemainingTables.sql",
+                "Monitor.Database.Scripts.Seed0001_DevPipelinesAndRuns.sql",
             },
             sqlResources);
     }
@@ -58,6 +59,25 @@ public class DatabaseEmbeddedResourcesTests
     }
 
     [Fact]
+    public void EmbeddedScriptNames_SortDevSeedScriptAfterBothSchemaScripts()
+    {
+        // The dev-only seed data (pipelines/pipeline_mappings/pipeline_runs demo rows) must
+        // apply after every table it inserts into already exists. "Seed..." sorts after
+        // "Script..." under an ordinal comparison ('e' > 'c' at index 1), so this holds even
+        // though Program.cs's environment filter - not the journal order - is what actually
+        // keeps this script out of non-Development deploys.
+        var assembly = LoadDatabaseAssembly();
+        var names = assembly.GetManifestResourceNames();
+
+        var remainingTables = Assert.Single(names, n => n.Contains("Script0002_RemainingTables", StringComparison.Ordinal));
+        var devSeed = Assert.Single(names, n => n.Contains("Seed0001_DevPipelinesAndRuns", StringComparison.Ordinal));
+
+        Assert.True(
+            string.CompareOrdinal(remainingTables, devSeed) < 0,
+            "Script0002_RemainingTables must sort before Seed0001_DevPipelinesAndRuns under an ordinal comparison.");
+    }
+
+    [Fact]
     public void NoUnexpectedScriptsAreEmbedded()
     {
         // Regression guard: a stray Scripts/*.sql file dropped in later must show up here
@@ -67,7 +87,7 @@ public class DatabaseEmbeddedResourcesTests
         var sqlResourceCount = assembly.GetManifestResourceNames()
             .Count(name => name.EndsWith(".sql", StringComparison.Ordinal));
 
-        Assert.Equal(2, sqlResourceCount);
+        Assert.Equal(3, sqlResourceCount);
     }
 
     [Fact]
@@ -90,6 +110,25 @@ public class DatabaseEmbeddedResourcesTests
             Assert.False(string.IsNullOrWhiteSpace(content));
             Assert.Contains("CREATE TABLE", content, StringComparison.Ordinal);
         }
+    }
+
+    [Fact]
+    public void DevSeedScriptContent_IsReadableAndContainsNoCredentials()
+    {
+        // The pipelines/pipeline_mappings/pipeline_runs seed data is plain, non-secret SQL and
+        // may stay a static embedded script; unlike user credentials it never needed to move
+        // to a generated-per-run code script (see Seed/DevUserSeedScript.cs for those).
+        var assembly = LoadDatabaseAssembly();
+
+        using var stream = assembly.GetManifestResourceStream("Monitor.Database.Scripts.Seed0001_DevPipelinesAndRuns.sql");
+        Assert.NotNull(stream);
+
+        using var reader = new StreamReader(stream!);
+        var content = reader.ReadToEnd();
+
+        Assert.False(string.IsNullOrWhiteSpace(content));
+        Assert.Contains("INSERT INTO pipelines", content, StringComparison.Ordinal);
+        Assert.DoesNotContain("password", content, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
