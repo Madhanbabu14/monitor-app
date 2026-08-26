@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net6.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <RootNamespace>Monitor.Identity</RootNamespace>
+    <AssemblyName>Monitor.Identity</AssemblyName>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Not part of the ASP.NET Core shared framework even in an Sdk.Web host —
+         JwtBearer ships its own NuGet package because it (transitively) pulls in
+         System.IdentityModel.Tokens.Jwt, which is versioned independently. -->
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="6.0.36" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Monitor.Core\Monitor.Core.csproj" />
+  </ItemGroup>
+
+</Project>

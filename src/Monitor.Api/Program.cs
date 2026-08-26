@@ -6,6 +6,7 @@ using Monitor.Core.Errors;
 using Monitor.Core.Logging;
 using Monitor.Core.Options;
 using Monitor.Data.DependencyInjection;
+using Monitor.Identity.DependencyInjection;
 using Serilog;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -90,9 +91,15 @@ builder.Services.AddValidatedOptions<WebhookOptions>(builder.Configuration, Webh
 //    fail-fast startup connectivity check (infrastructure/database/connection.ts) ──
 builder.Services.AddMonitorData();
 
-// Bounded-context service registrations (Monitor.Identity / Files / Operations)
-// are added by their own slices via extension methods on
-// builder.Services — intentionally not referenced here yet.
+// ── Auth shell: dual JwtBearer schemes (AppJwt HS256 / AzureAd JWKS) + named
+//    authorization policies (middleware/auth.middleware.ts's `authenticate` +
+//    `authorize`, utils/azureAuth.ts's `validateAzureToken`) ────────────────
+builder.Services.AddMonitorIdentity(builder.Configuration);
+
+// Remaining bounded-context service registrations (Monitor.Identity's
+// user/login/SSO-exchange services, Files, Operations) are added by their
+// own slices via extension methods on builder.Services — intentionally not
+// referenced here yet.
 
 var app = builder.Build();
 
@@ -134,6 +141,12 @@ app.UseCors(policy => policy
     .AllowAnyHeader()
     .WithMethods("GET", "HEAD", "PUT", "PATCH", "POST", "DELETE")
     .AllowCredentials());
+
+// ── auth shell: authenticate (dual JwtBearer schemes) then authorize (named
+//    policies) — must run before any endpoint that calls
+//    .RequireAuthorization(...) (middleware/auth.middleware.ts) ────────────
+app.UseAuthentication();
+app.UseAuthorization();
 
 // ── app.use(compression()) (app.ts) ────────────────────────────────────────
 app.UseResponseCompression();
