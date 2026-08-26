@@ -16,6 +16,7 @@
   <ItemGroup>
     <ProjectReference Include="..\Monitor.Core\Monitor.Core.csproj" />
     <ProjectReference Include="..\Monitor.Data\Monitor.Data.csproj" />
+    <ProjectReference Include="..\Monitor.Identity\Monitor.Identity.csproj" />
   </ItemGroup>
 
 </Project>
