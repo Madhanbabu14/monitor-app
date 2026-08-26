@@ -11,12 +11,20 @@
   <ItemGroup>
     <!-- Not part of the ASP.NET Core shared framework even in an Sdk.Web host —
          JwtBearer ships its own NuGet package because it (transitively) pulls in
-         System.IdentityModel.Tokens.Jwt, which is versioned independently. -->
+         System.IdentityModel.Tokens.Jwt and Microsoft.IdentityModel.Protocols.OpenIdConnect
+         (used here both for app-JWT issuance and for validating Azure AD tokens
+         handed to POST /api/auth/sso, which is versioned independently. -->
     <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="6.0.36" />
+    <!-- Same package/version as Monitor.Database's dev user seed — local login
+         (POST /api/auth/login) hashes/verifies with the same algorithm the
+         source's `bcrypt` npm package used. -->
+    <PackageReference Include="BCrypt.Net-Next" Version="4.0.3" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\Monitor.Core\Monitor.Core.csproj" />
+    <!-- Users/UserRepository reads the `users` table via IPrimaryDb (Dapper). -->
+    <ProjectReference Include="..\Monitor.Data\Monitor.Data.csproj" />
   </ItemGroup>
 
 </Project>
