@@ -22,6 +22,14 @@
     <ProjectReference Include="..\..\src\Monitor.Core\Monitor.Core.csproj" />
     <ProjectReference Include="..\..\src\Monitor.Data\Monitor.Data.csproj" />
     <ProjectReference Include="..\..\src\Monitor.Api\Monitor.Api.csproj" />
+    <!--
+      Monitor.Database is a standalone DbUp console with its own deploy cadence, never
+      referenced by Monitor.Api at runtime - but it IS referenced here, by tests only, so
+      we can (a) reflect over its embedded Scripts/*.sql resources and (b) launch its built
+      .dll out-of-process to exercise Program.cs's config-validation fail-fast path without
+      needing a live Postgres server.
+    -->
+    <ProjectReference Include="..\..\src\Monitor.Database\Monitor.Database.csproj" />
   </ItemGroup>
 
   <ItemGroup>
@@ -32,6 +40,17 @@
     <!-- Real, shipped appsettings used to exercise Options binding + validation end to end. -->
     <Content Include="..\..\src\Monitor.Api\appsettings.json" Link="TestData\appsettings.json" CopyToOutputDirectory="PreserveNewest" />
     <Content Include="..\..\src\Monitor.Api\appsettings.Development.json" Link="TestData\appsettings.Development.json" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!--
+      Monitor.Database's own shipped config + the raw Scripts/*.sql it embeds, linked in so
+      tests read the exact checked-in files rather than a copy that can drift.
+    -->
+    <Content Include="..\..\src\Monitor.Database\appsettings.json" Link="TestData\Database\appsettings.json" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="..\..\src\Monitor.Database\appsettings.Development.json" Link="TestData\Database\appsettings.Development.json" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="..\..\src\Monitor.Database\Scripts\Script0001_UsedTables.sql" Link="TestData\Database\Scripts\Script0001_UsedTables.sql" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="..\..\src\Monitor.Database\Scripts\Script0002_RemainingTables.sql" Link="TestData\Database\Scripts\Script0002_RemainingTables.sql" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
 </Project>
