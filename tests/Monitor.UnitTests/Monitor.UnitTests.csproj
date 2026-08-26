@@ -9,6 +9,7 @@
 
   <ItemGroup>
     <PackageReference Include="coverlet.collector" Version="6.0.4" />
+    <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" Version="6.0.36" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.8.0" />
     <PackageReference Include="xunit" Version="2.9.3" />
     <PackageReference Include="xunit.runner.visualstudio" Version="2.8.2" />
@@ -30,6 +31,14 @@
       needing a live Postgres server.
     -->
     <ProjectReference Include="..\..\src\Monitor.Database\Monitor.Database.csproj" />
+    <!--
+      Monitor.Gateway is the YARP strangler proxy: its own deploy cadence per the
+      architecture brief, but referenced here (test-only, same pattern as
+      Monitor.Database above) so we can bind its real appsettings*.json and boot it
+      in-memory via WebApplicationFactory<Program> to exercise its own liveness
+      endpoint and options validation without needing a live downstream service.
+    -->
+    <ProjectReference Include="..\..\src\Monitor.Gateway\Monitor.Gateway.csproj" />
   </ItemGroup>
 
   <ItemGroup>
@@ -40,6 +49,13 @@
     <!-- Real, shipped appsettings used to exercise Options binding + validation end to end. -->
     <Content Include="..\..\src\Monitor.Api\appsettings.json" Link="TestData\appsettings.json" CopyToOutputDirectory="PreserveNewest" />
     <Content Include="..\..\src\Monitor.Api\appsettings.Development.json" Link="TestData\appsettings.Development.json" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Real, shipped Gateway config used to exercise its Options binding + ReverseProxy
+         route/cluster shape end to end (mirrors the Monitor.Api TestData/ pair above). -->
+    <Content Include="..\..\src\Monitor.Gateway\appsettings.json" Link="TestData\Gateway\appsettings.json" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="..\..\src\Monitor.Gateway\appsettings.Development.json" Link="TestData\Gateway\appsettings.Development.json" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
   <ItemGroup>
