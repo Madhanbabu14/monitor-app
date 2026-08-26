@@ -16,6 +16,11 @@
     <PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" Version="8.0.0" />
     <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="8.0.0" />
     <PackageReference Include="Microsoft.Extensions.Options" Version="8.0.0" />
+    <!-- Not part of the ASP.NET Core shared framework here since this is a plain
+         Sdk="Microsoft.NET.Sdk" class library (Monitor.Api, which IS Sdk.Web, gets
+         these types for free) — needed for the degraded-not-unhealthy operational
+         DB health check below. -->
+    <PackageReference Include="Microsoft.Extensions.Diagnostics.HealthChecks" Version="8.0.0" />
   </ItemGroup>
 
   <ItemGroup>

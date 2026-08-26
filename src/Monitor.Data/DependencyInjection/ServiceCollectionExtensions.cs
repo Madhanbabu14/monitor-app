@@ -1,8 +1,10 @@
+using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Monitor.Core.Options;
 using Monitor.Data.DataSources;
+using Monitor.Data.HealthChecks;
 using Monitor.Data.Repositories;
 using Monitor.Data.Startup;
 
@@ -45,6 +47,17 @@ public static class ServiceCollectionExtensions
         // Fail-fast: abort host startup if the primary DB can't actually be reached,
         // mirroring the source calling testConnection() before app.listen().
         services.AddHostedService<PrimaryDatabaseStartupCheck>();
+
+        // Degraded (never Unhealthy) signal for the optional operational replica —
+        // see OperationalDatabaseHealthCheck. failureStatus is set defensively in
+        // case a future caller filters by tag without reading the check's own
+        // result; the check itself already returns Degraded, not Unhealthy, on
+        // every failure path (including "not configured", which is Healthy).
+        services.AddHealthChecks()
+            .AddCheck<OperationalDatabaseHealthCheck>(
+                "operational-database",
+                failureStatus: HealthStatus.Degraded,
+                tags: new[] { "database", "operational" });
 
         return services;
     }
