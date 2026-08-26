@@ -12,8 +12,12 @@ export default defineConfig({
   server: {
     port: 3000,
     proxy: {
+      // Points at Monitor.Gateway (the YARP strangler proxy), not the
+      // legacy Express service directly. The gateway routes each /api/*
+      // path to whichever service currently owns it (legacy Node or the
+      // growing Monitor.Api) — see src/Monitor.Gateway/appsettings*.json.
       '/api': {
-        target: 'http://localhost:4001',
+        target: 'http://localhost:8080',
         changeOrigin: true,
       },
     },

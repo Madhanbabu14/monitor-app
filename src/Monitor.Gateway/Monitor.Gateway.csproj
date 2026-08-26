@@ -1,0 +1,32 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net6.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <RootNamespace>Monitor.Gateway</RootNamespace>
+    <AssemblyName>Monitor.Gateway</AssemblyName>
+    <UserSecretsId>monitor-gateway</UserSecretsId>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- YARP: the strangler-fig reverse proxy that lets the retained React/Vite
+         client keep talking to a single origin while /api/* is routed, path by
+         path, to either the not-yet-decommissioned Node/Express service
+         ("legacy" cluster) or the growing Monitor.Api ("dotnet" cluster) as
+         each bounded context's endpoints land. Config-driven (see
+         appsettings*.json's ReverseProxy section) so cutting a route over from
+         legacy to dotnet is a config change, not a code change. -->
+    <PackageReference Include="Yarp.ReverseProxy" Version="1.1.2" />
+    <PackageReference Include="Serilog.AspNetCore" Version="6.1.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Only for the shared Serilog bootstrap + validated-options helper —
+         Monitor.Gateway does NOT depend on any bounded-context project
+         (Identity/Data/Files/Operations). It has its own deploy cadence,
+         per the architecture brief, and knows nothing about the domain. -->
+    <ProjectReference Include="..\Monitor.Core\Monitor.Core.csproj" />
+  </ItemGroup>
+
+</Project>

@@ -21,46 +21,49 @@ services:
       timeout: 5s
       retries: 5
 
-  backend:
+  # The legacy Node/Express backend is NOT built from this repo (its source
+  # lives in the original monorepo and is deployed independently during the
+  # strangler window — see "Remove Node.js backend" in this repo's history).
+  # Run it separately (e.g. `cd backend && npm run dev`, or its own compose
+  # file / container image) and point LEGACY_BACKEND_URL at wherever it
+  # ends up listening; the gateway's "legacy" cluster destination below
+  # defaults to the same http://localhost:4001 the frontend used to talk to
+  # directly in dev.
+  #
+  # Monitor.Api (this repo's replacement backend) has no route groups
+  # mapped yet as of this slice, so it is not wired into the gateway here
+  # either — a later slice adds a `monitor-api` service once it has
+  # endpoints to serve, and flips the relevant ReverseProxy routes in
+  # src/Monitor.Gateway/appsettings.json from the "legacy" cluster to the
+  # "dotnet" cluster.
+  gateway:
     build:
-      context: ./backend
-      dockerfile: Dockerfile
-    container_name: pcc-backend
+      context: .
+      dockerfile: src/Monitor.Gateway/Dockerfile
+    container_name: pcc-gateway
     restart: unless-stopped
-    depends_on:
-      postgres:
-        condition: service_healthy
     environment:
-      NODE_ENV: production
-      PORT: 4000
-      DATABASE_URL: postgresql://${POSTGRES_USER:-pcc_user}:${POSTGRES_PASSWORD:-pcc_password}@postgres:5432/${POSTGRES_DB:-pipeline_control_center}
-      AZURE_TENANT_ID: ${AZURE_TENANT_ID}
-      AZURE_CLIENT_ID: ${AZURE_CLIENT_ID}
-      AZURE_CLIENT_SECRET: ${AZURE_CLIENT_SECRET}
-      AZURE_SUBSCRIPTION_ID: ${AZURE_SUBSCRIPTION_ID}
-      AZURE_RESOURCE_GROUP: ${AZURE_RESOURCE_GROUP}
-      AZURE_DATA_FACTORY_NAME: ${AZURE_DATA_FACTORY_NAME}
-      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID}
-      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY}
-      AWS_REGION: ${AWS_REGION:-us-east-1}
-      AWS_S3_BUCKET: ${AWS_S3_BUCKET}
-      JWT_SECRET: ${JWT_SECRET}
-      CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:3000}
+      ASPNETCORE_ENVIRONMENT: Production
+      Gateway__Port: '8080'
+      ReverseProxy__Clusters__legacy__Destinations__destination1__Address: ${LEGACY_BACKEND_URL:-http://host.docker.internal:4001/}
     ports:
-      - '4000:4000'
+      - '8080:8080'
 
   frontend:
     build:
       context: ./frontend
       dockerfile: Dockerfile
       args:
-        VITE_API_URL: ${VITE_API_URL:-http://localhost:4000/api}
+        # Points at the gateway, not at either backend directly — see
+        # frontend/src/services/api.ts, which reads this as its axios
+        # baseURL.
+        VITE_API_URL: ${VITE_API_URL:-http://localhost:8080/api}
         VITE_AZURE_CLIENT_ID: ${AZURE_CLIENT_ID}
         VITE_AZURE_TENANT_ID: ${AZURE_TENANT_ID}
     container_name: pcc-frontend
     restart: unless-stopped
     depends_on:
-      - backend
+      - gateway
     ports:
       - '3000:80'
 
