@@ -1,11 +1,13 @@
 using Microsoft.AspNetCore.ResponseCompression;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Options;
+using Monitor.Api.Endpoints;
 using Monitor.Api.Middleware;
 using Monitor.Core.Errors;
 using Monitor.Core.Logging;
 using Monitor.Core.Options;
 using Monitor.Data.DependencyInjection;
+using Monitor.Files.DependencyInjection;
 using Monitor.Identity.DependencyInjection;
 using Serilog;
 
@@ -96,9 +98,13 @@ builder.Services.AddMonitorData();
 //    `authorize`, utils/azureAuth.ts's `validateAzureToken`) ────────────────
 builder.Services.AddMonitorIdentity(builder.Configuration);
 
+// ── Monitor.Files bounded context: S3 client + IFilesService
+//    (features/s3/s3.service.ts) ───────────────────────────────────────────
+builder.Services.AddMonitorFiles();
+
 // Remaining bounded-context service registrations (Monitor.Identity's
-// user/login/SSO-exchange services, Files, Operations) are added by their
-// own slices via extension methods on builder.Services — intentionally not
+// user/login/SSO-exchange services, Operations) are added by their own
+// slices via extension methods on builder.Services — intentionally not
 // referenced here yet.
 
 var app = builder.Build();
@@ -167,6 +173,7 @@ app.MapGet("/health", () => Results.Json(new
 
 // Feature endpoint modules (AuthEndpoints, FilesEndpoints, MonitorEndpoints, ...)
 // are mapped here by their own slices, e.g. `app.MapAuthEndpoints();`.
+app.MapFilesEndpoints();
 
 // ── notFoundHandler equivalent — fallback for anything no endpoint matched ──
 app.MapFallback(async context =>

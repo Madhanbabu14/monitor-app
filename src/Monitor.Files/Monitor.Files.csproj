@@ -1,0 +1,29 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net6.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <RootNamespace>Monitor.Files</RootNamespace>
+    <AssemblyName>Monitor.Files</AssemblyName>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Direct analogue of @aws-sdk/client-s3's S3Client / ListObjectsV2Command /
+         GetObjectCommand (features/s3/s3.service.ts). -->
+    <PackageReference Include="AWSSDK.S3" Version="3.7.305.26" />
+    <!-- Version-aligned with Monitor.Data's transitive Microsoft.Extensions.* (8.0.0) to
+         avoid NU1605 package-downgrade errors; Microsoft.Extensions.Caching.Memory 6.0.1
+         has a known high-severity advisory (GHSA-qj66-m88j-hmgj), so pin to the patched 8.x line. -->
+    <PackageReference Include="Microsoft.Extensions.Caching.Memory" Version="8.0.1" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="8.0.2" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="8.0.2" />
+    <PackageReference Include="Microsoft.Extensions.Options" Version="8.0.2" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Monitor.Core\Monitor.Core.csproj" />
+    <ProjectReference Include="..\Monitor.Data\Monitor.Data.csproj" />
+  </ItemGroup>
+
+</Project>

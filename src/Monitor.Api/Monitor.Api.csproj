@@ -17,6 +17,7 @@
     <ProjectReference Include="..\Monitor.Core\Monitor.Core.csproj" />
     <ProjectReference Include="..\Monitor.Data\Monitor.Data.csproj" />
     <ProjectReference Include="..\Monitor.Identity\Monitor.Identity.csproj" />
+    <ProjectReference Include="..\Monitor.Files\Monitor.Files.csproj" />
   </ItemGroup>
 
 </Project>
