@@ -1,4 +1,5 @@
 using System.Data;
+using System.Diagnostics.CodeAnalysis;
 using System.Text.RegularExpressions;
 using Monitor.Database.Seed;
 
@@ -284,7 +285,14 @@ public class DevUserSeedScriptTests
     /// <summary>Minimal <see cref="IDbCommand"/> fake sufficient for <see cref="DevUserSeedScript"/>.</summary>
     private sealed class FakeDbCommand : IDbCommand
     {
-        public string? CommandText { get; set; }
+        private string _commandText = string.Empty;
+
+        [AllowNull]
+        public string CommandText
+        {
+            get => _commandText;
+            set => _commandText = value ?? string.Empty;
+        }
 
         public int CommandTimeout { get; set; }
 
@@ -331,9 +339,23 @@ public class DevUserSeedScriptTests
 
         public bool IsNullable => true;
 
-        public string ParameterName { get; set; } = string.Empty;
+        private string _parameterName = string.Empty;
 
-        public string SourceColumn { get; set; } = string.Empty;
+        [AllowNull]
+        public string ParameterName
+        {
+            get => _parameterName;
+            set => _parameterName = value ?? string.Empty;
+        }
+
+        private string _sourceColumn = string.Empty;
+
+        [AllowNull]
+        public string SourceColumn
+        {
+            get => _sourceColumn;
+            set => _sourceColumn = value ?? string.Empty;
+        }
 
         public DataRowVersion SourceVersion { get; set; }
 
@@ -367,9 +389,9 @@ public class DevUserSeedScriptTests
             }
         }
 
-        public object? this[string parameterName]
+        public object this[string parameterName]
         {
-            get => this.First(p => p.ParameterName == parameterName).Value;
+            get => this.First(p => p.ParameterName == parameterName).Value!;
             set
             {
                 var index = IndexOf(parameterName);
