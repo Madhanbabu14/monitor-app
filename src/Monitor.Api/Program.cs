@@ -9,6 +9,7 @@ using Monitor.Core.Options;
 using Monitor.Data.DependencyInjection;
 using Monitor.Files.DependencyInjection;
 using Monitor.Identity.DependencyInjection;
+using Monitor.Operations.DependencyInjection;
 using Serilog;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -108,9 +109,11 @@ builder.Services.AddMonitorIdentityUsers();
 //    Depends on AddMonitorData() above for IPrimaryDb. ──────────────────────
 builder.Services.AddMonitorFiles();
 
-// Remaining bounded-context service registrations (Operations) are added by
-// their own slice(s) via extension methods on builder.Services —
-// intentionally not referenced here yet.
+// ── Monitor.Operations's dashboard/reconciliation/file-monitor services
+//    (monitor.service.ts) — /api/monitor dashboard, reconcile, files,
+//    pipeline-names, db-status. Depends on AddMonitorData() above for
+//    IOperationalDb and AddMonitorFiles() above for IS3FilesService. ──────
+builder.Services.AddMonitorOperations();
 
 var app = builder.Build();
 
@@ -176,11 +179,12 @@ app.MapGet("/health", () => Results.Json(new
     version = "1.0.0",
 }));
 
-// Feature endpoint modules (MonitorEndpoints, ...) are mapped here by their own slices.
 // ── /api/auth: local login, Azure AD SSO exchange, current user (auth.routes.ts) ──
 app.MapAuthEndpoints();
 // ── /api/s3: list/search files, pipeline names, download, retrigger (s3.routes.ts) ──
 app.MapFilesEndpoints();
+// ── /api/monitor: dashboard, reconcile, files, pipeline-names, db-status (monitor.routes.ts) ──
+app.MapMonitorEndpoints();
 
 // ── notFoundHandler equivalent — fallback for anything no endpoint matched ──
 app.MapFallback(async context =>
