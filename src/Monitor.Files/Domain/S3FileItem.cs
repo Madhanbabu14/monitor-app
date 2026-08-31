@@ -1,3 +1,5 @@
+using System.Text.Json.Serialization;
+
 namespace Monitor.Files.Domain;
 
 /// <summary>
@@ -12,5 +14,5 @@ public sealed record S3FileItem(
     string Prefix,
     long Size,
     string LastModified,
-    string ETag,
+    [property: JsonPropertyName("etag")] string ETag,
     string? PipelineName);

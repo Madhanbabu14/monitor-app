@@ -75,14 +75,19 @@ public sealed class S3FilesService : IS3FilesService
             filtered = filtered.Where(f => f.Name.ToLowerInvariant().Contains(q));
         }
 
-        if (!string.IsNullOrEmpty(parameters.StartDate) && DateTime.TryParse(parameters.StartDate, CultureInfo.InvariantCulture, DateTimeStyles.AdjustToUniversal | DateTimeStyles.AssumeUniversal, out var from))
+        if (!string.IsNullOrEmpty(parameters.StartDate))
         {
-            filtered = filtered.Where(f => ParseIso(f.LastModified) >= from);
+            // Source: `new Date(startDate).getTime()` yields NaN for an unparseable
+            // date, and every NaN comparison is false, so a malformed value filters
+            // out ALL items rather than being ignored. TryParseDate returning null
+            // reproduces that by making the predicate unconditionally false.
+            var from = TryParseDate(parameters.StartDate);
+            filtered = filtered.Where(f => from.HasValue && ParseIso(f.LastModified) >= from.Value);
         }
-        if (!string.IsNullOrEmpty(parameters.EndDate) && DateTime.TryParse(parameters.EndDate, CultureInfo.InvariantCulture, DateTimeStyles.AdjustToUniversal | DateTimeStyles.AssumeUniversal, out var to))
+        if (!string.IsNullOrEmpty(parameters.EndDate))
         {
-            to = to.Date.AddHours(23).AddMinutes(59).AddSeconds(59).AddMilliseconds(999);
-            filtered = filtered.Where(f => ParseIso(f.LastModified) <= to);
+            var to = TryParseDate(parameters.EndDate)?.Date.AddHours(23).AddMinutes(59).AddSeconds(59).AddMilliseconds(999);
+            filtered = filtered.Where(f => to.HasValue && ParseIso(f.LastModified) <= to.Value);
         }
 
         var sorted = SortItems(filtered.ToList(), parameters.SortBy, parameters.SortOrder);
@@ -215,14 +220,15 @@ public sealed class S3FilesService : IS3FilesService
         var items = await FetchAllObjectsCachedAsync(_awsOptions.S3Prefix ?? string.Empty, cancellationToken);
 
         IEnumerable<S3FileItem> filtered = items;
-        if (!string.IsNullOrEmpty(startDate) && DateTime.TryParse(startDate, CultureInfo.InvariantCulture, DateTimeStyles.AdjustToUniversal | DateTimeStyles.AssumeUniversal, out var from))
+        if (!string.IsNullOrEmpty(startDate))
         {
-            filtered = filtered.Where(f => ParseIso(f.LastModified) >= from);
+            var from = TryParseDate(startDate);
+            filtered = filtered.Where(f => from.HasValue && ParseIso(f.LastModified) >= from.Value);
         }
-        if (!string.IsNullOrEmpty(endDate) && DateTime.TryParse(endDate, CultureInfo.InvariantCulture, DateTimeStyles.AdjustToUniversal | DateTimeStyles.AssumeUniversal, out var to))
+        if (!string.IsNullOrEmpty(endDate))
         {
-            to = to.Date.AddHours(23).AddMinutes(59).AddSeconds(59).AddMilliseconds(999);
-            filtered = filtered.Where(f => ParseIso(f.LastModified) <= to);
+            var to = TryParseDate(endDate)?.Date.AddHours(23).AddMinutes(59).AddSeconds(59).AddMilliseconds(999);
+            filtered = filtered.Where(f => to.HasValue && ParseIso(f.LastModified) <= to.Value);
         }
 
         return filtered.Select(f => new FileNameDateEntry(f.Name, f.LastModified)).ToList();
@@ -351,4 +357,9 @@ public sealed class S3FilesService : IS3FilesService
 
     private static DateTime ParseIso(string value) =>
         DateTime.Parse(value, CultureInfo.InvariantCulture, DateTimeStyles.AdjustToUniversal | DateTimeStyles.AssumeUniversal);
+
+    private static DateTime? TryParseDate(string value) =>
+        DateTime.TryParse(value, CultureInfo.InvariantCulture, DateTimeStyles.AdjustToUniversal | DateTimeStyles.AssumeUniversal, out var parsed)
+            ? parsed
+            : null;
 }
