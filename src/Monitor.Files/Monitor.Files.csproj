@@ -1,0 +1,30 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net6.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <RootNamespace>Monitor.Files</RootNamespace>
+    <AssemblyName>Monitor.Files</AssemblyName>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Direct analogue of the source's @aws-sdk/client-s3 (ListObjectsV2Command,
+         GetObjectCommand) — the only third-party dependency s3.service.ts had. -->
+    <PackageReference Include="AWSSDK.S3" Version="3.7.305.26" />
+    <!-- Backs the 60s raw-listing cache + inflight de-duplication described in the
+         Architect's brief (IMemoryCache holding AsyncLazy<T>), replacing the
+         source's hand-rolled module-level rawS3Cache/rawS3Inflight variables. -->
+    <PackageReference Include="Microsoft.Extensions.Caching.Memory" Version="6.0.3" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="8.0.0" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="8.0.0" />
+    <PackageReference Include="Microsoft.Extensions.Options" Version="8.0.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Monitor.Core\Monitor.Core.csproj" />
+    <!-- RetriggerFileAsync inserts into recovery_jobs / upserts pipelines via IPrimaryDb (Dapper). -->
+    <ProjectReference Include="..\Monitor.Data\Monitor.Data.csproj" />
+  </ItemGroup>
+
+</Project>

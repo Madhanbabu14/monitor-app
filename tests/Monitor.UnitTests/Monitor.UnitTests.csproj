@@ -22,6 +22,7 @@
   <ItemGroup>
     <ProjectReference Include="..\..\src\Monitor.Core\Monitor.Core.csproj" />
     <ProjectReference Include="..\..\src\Monitor.Data\Monitor.Data.csproj" />
+    <ProjectReference Include="..\..\src\Monitor.Files\Monitor.Files.csproj" />
     <ProjectReference Include="..\..\src\Monitor.Api\Monitor.Api.csproj" />
     <!--
       Monitor.Database is a standalone DbUp console with its own deploy cadence, never

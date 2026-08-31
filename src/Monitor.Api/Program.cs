@@ -7,6 +7,7 @@ using Monitor.Core.Errors;
 using Monitor.Core.Logging;
 using Monitor.Core.Options;
 using Monitor.Data.DependencyInjection;
+using Monitor.Files.DependencyInjection;
 using Monitor.Identity.DependencyInjection;
 using Serilog;
 
@@ -102,8 +103,13 @@ builder.Services.AddMonitorIdentity(builder.Configuration);
 //    issuance. Depends on AddMonitorData() above for IPrimaryDb. ──────────
 builder.Services.AddMonitorIdentityUsers();
 
-// Remaining bounded-context service registrations (Files, Operations) are
-// added by their own slices via extension methods on builder.Services —
+// ── Monitor.Files's S3 client + raw-listing cache + retrigger/pipeline-name
+//    services (s3.service.ts) — /api/s3 list/search/download/retrigger.
+//    Depends on AddMonitorData() above for IPrimaryDb. ──────────────────────
+builder.Services.AddMonitorFiles();
+
+// Remaining bounded-context service registrations (Operations) are added by
+// their own slice(s) via extension methods on builder.Services —
 // intentionally not referenced here yet.
 
 var app = builder.Build();
@@ -170,10 +176,11 @@ app.MapGet("/health", () => Results.Json(new
     version = "1.0.0",
 }));
 
-// Feature endpoint modules (FilesEndpoints, MonitorEndpoints, ...) are
-// mapped here by their own slices.
+// Feature endpoint modules (MonitorEndpoints, ...) are mapped here by their own slices.
 // ── /api/auth: local login, Azure AD SSO exchange, current user (auth.routes.ts) ──
 app.MapAuthEndpoints();
+// ── /api/s3: list/search files, pipeline names, download, retrigger (s3.routes.ts) ──
+app.MapFilesEndpoints();
 
 // ── notFoundHandler equivalent — fallback for anything no endpoint matched ──
 app.MapFallback(async context =>

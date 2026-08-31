@@ -1,0 +1,14 @@
+namespace Monitor.Files.Domain;
+
+/// <summary>Direct translation of the source's <c>ListFilesResult</c> interface (s3.service.ts).</summary>
+public sealed record ListFilesResult(
+    IReadOnlyList<S3FileItem> Files,
+    int Total,
+    long TotalSize,
+    int Page,
+    int Limit,
+    int TotalPages,
+    IReadOnlyList<string> Folders,
+    IReadOnlyList<string> Suggestions,
+    string Bucket,
+    string RootPrefix);
