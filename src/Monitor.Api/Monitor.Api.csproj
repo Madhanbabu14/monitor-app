@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk.Web">
 
   <PropertyGroup>
-    <TargetFramework>net6.0</TargetFramework>
+    <TargetFramework>net10.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <RootNamespace>Monitor.Api</RootNamespace>
@@ -17,6 +17,7 @@
     <ProjectReference Include="..\Monitor.Core\Monitor.Core.csproj" />
     <ProjectReference Include="..\Monitor.Data\Monitor.Data.csproj" />
     <ProjectReference Include="..\Monitor.Identity\Monitor.Identity.csproj" />
+    <ProjectReference Include="..\Monitor.Files\Monitor.Files.csproj" />
   </ItemGroup>
 
 </Project>

@@ -1,8 +1,11 @@
+extern alias GatewayHost;
+
 using System.Net;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
+using GatewayProgram = GatewayHost::Program;
 
 namespace Monitor.UnitTests.Gateway;
 
@@ -47,8 +50,8 @@ public sealed class GatewayHostTests : IDisposable
         }
     }
 
-    private static WebApplicationFactory<Program> CreateFactory() =>
-        new WebApplicationFactory<Program>().WithWebHostBuilder(builder =>
+    private static WebApplicationFactory<GatewayProgram> CreateFactory() =>
+        new WebApplicationFactory<GatewayProgram>().WithWebHostBuilder(builder =>
         {
             // WebApplicationFactory's default content-root discovery walks up from the test
             // assembly looking for "<assemblyName>.csproj" (i.e. "Monitor.Gateway.csproj")
@@ -56,7 +59,7 @@ public sealed class GatewayHostTests : IDisposable
             // project lives under "src/Monitor.Gateway", not "Monitor.Gateway". Point it
             // straight at Monitor.Gateway's own build output directory instead, which
             // already has its appsettings*.json copied alongside the built assembly.
-            var gatewayAssemblyDirectory = Path.GetDirectoryName(typeof(Program).Assembly.Location)!;
+            var gatewayAssemblyDirectory = Path.GetDirectoryName(typeof(GatewayProgram).Assembly.Location)!;
             builder.UseContentRoot(gatewayAssemblyDirectory);
 
             // Pin the environment so cluster destinations are the Development overlay's
