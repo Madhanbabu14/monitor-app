@@ -7,6 +7,7 @@ using Monitor.Core.Domain;
 using Monitor.Core.Options;
 using Monitor.Identity.Authentication;
 using Monitor.Identity.Authorization;
+using Monitor.Identity.Users;
 
 namespace Monitor.Identity.DependencyInjection;
 
@@ -101,6 +102,33 @@ public static class IdentityServiceCollectionExtensions
             options.AddPolicy(AuthorizationPolicyNames.RequireOperator, policy => policy.RequireRole(UserRole.Operator.ToWireString()));
             options.AddPolicy(AuthorizationPolicyNames.RequireViewer, policy => policy.RequireRole(UserRole.Viewer.ToWireString()));
         });
+
+        return services;
+    }
+
+    /// <summary>
+    /// Registers the user/login/SSO-exchange services behind POST
+    /// /api/auth/login, POST /api/auth/sso and GET /api/auth/me — direct
+    /// translation of auth.service.ts's <c>AuthService</c> (+ its
+    /// dependencies, utils/azureAuth.ts's <c>validateAzureToken</c> and the
+    /// raw `users` table queries). Deliberately separate from
+    /// <see cref="AddMonitorIdentity"/> (the auth shell): that method wires
+    /// the two JwtBearer schemes + authorization policies every endpoint
+    /// depends on regardless of which feature slice added it; this one is
+    /// this slice's own feature registration, called alongside it from
+    /// Monitor.Api's Program.cs. Requires <c>AddMonitorData()</c> to already
+    /// be registered (depends on <see cref="Monitor.Data.Repositories.IPrimaryDb"/>).
+    /// </summary>
+    public static IServiceCollection AddMonitorIdentityUsers(this IServiceCollection services)
+    {
+        services.AddScoped<IUserRepository, UserRepository>();
+        services.AddSingleton<IAppJwtIssuer, AppJwtIssuer>();
+        // Singleton: wraps a ConfigurationManager<OpenIdConnectConfiguration> that
+        // caches the tenant's JWKS itself (the .NET analogue of the source's
+        // jwks-rsa client cache), so this should live for the app's lifetime
+        // rather than being rebuilt per request/scope.
+        services.AddSingleton<IAzureTokenValidator, AzureTokenValidator>();
+        services.AddScoped<IAuthService, AuthService>();
 
         return services;
     }

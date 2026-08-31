@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.ResponseCompression;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Options;
+using Monitor.Api.Endpoints;
 using Monitor.Api.Middleware;
 using Monitor.Core.Errors;
 using Monitor.Core.Logging;
@@ -96,10 +97,14 @@ builder.Services.AddMonitorData();
 //    `authorize`, utils/azureAuth.ts's `validateAzureToken`) ────────────────
 builder.Services.AddMonitorIdentity(builder.Configuration);
 
-// Remaining bounded-context service registrations (Monitor.Identity's
-// user/login/SSO-exchange services, Files, Operations) are added by their
-// own slices via extension methods on builder.Services — intentionally not
-// referenced here yet.
+// ── Monitor.Identity's user/login/SSO-exchange services (auth.service.ts) —
+//    local BCrypt login, Azure AD token exchange + user upsert, app-JWT
+//    issuance. Depends on AddMonitorData() above for IPrimaryDb. ──────────
+builder.Services.AddMonitorIdentityUsers();
+
+// Remaining bounded-context service registrations (Files, Operations) are
+// added by their own slices via extension methods on builder.Services —
+// intentionally not referenced here yet.
 
 var app = builder.Build();
 
@@ -165,8 +170,10 @@ app.MapGet("/health", () => Results.Json(new
     version = "1.0.0",
 }));
 
-// Feature endpoint modules (AuthEndpoints, FilesEndpoints, MonitorEndpoints, ...)
-// are mapped here by their own slices, e.g. `app.MapAuthEndpoints();`.
+// Feature endpoint modules (FilesEndpoints, MonitorEndpoints, ...) are
+// mapped here by their own slices.
+// ── /api/auth: local login, Azure AD SSO exchange, current user (auth.routes.ts) ──
+app.MapAuthEndpoints();
 
 // ── notFoundHandler equivalent — fallback for anything no endpoint matched ──
 app.MapFallback(async context =>
