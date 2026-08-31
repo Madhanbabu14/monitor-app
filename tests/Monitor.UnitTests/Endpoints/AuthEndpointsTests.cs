@@ -84,8 +84,8 @@ public class AuthEndpointsTests
     {
         private readonly PrincipalHolder _holder;
 
-        public TestAuthHandler(IOptionsMonitor<AuthenticationSchemeOptions> options, ILoggerFactory logger, UrlEncoder encoder, ISystemClock clock, PrincipalHolder holder)
-            : base(options, logger, encoder, clock)
+        public TestAuthHandler(IOptionsMonitor<AuthenticationSchemeOptions> options, ILoggerFactory logger, UrlEncoder encoder, PrincipalHolder holder)
+            : base(options, logger, encoder)
         {
             _holder = holder;
         }

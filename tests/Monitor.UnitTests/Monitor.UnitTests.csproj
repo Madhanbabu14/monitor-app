@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net6.0</TargetFramework>
+    <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <IsPackable>false</IsPackable>
@@ -39,7 +39,7 @@
       in-memory via WebApplicationFactory<Program> to exercise its own liveness
       endpoint and options validation without needing a live downstream service.
     -->
-    <ProjectReference Include="..\..\src\Monitor.Gateway\Monitor.Gateway.csproj" />
+    <ProjectReference Include="..\..\src\Monitor.Gateway\Monitor.Gateway.csproj" Aliases="global,GatewayHost" />
   </ItemGroup>
 
   <ItemGroup>
